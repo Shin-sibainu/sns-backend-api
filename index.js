@@ -8,10 +8,6 @@ const cors = require("cors");
 
 const PORT = 5000;
 
-//supabase:email:unitylabshin@gmail.com
-//login pass:Juvenile0712<>
-//supabase table pass: shincode0712
-
 //https://hotokami.jp/
 
 app.use(cors());
