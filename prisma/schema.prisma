@@ -1,0 +1,108 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(uuid()) // Supabase 'sub'フィールドを使用
+  username       String   @unique
+  email          String   @unique
+  passwordHash   String?
+  profilePicture String?
+  bio            String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  posts          Post[]
+  comments       Comment[]
+  likes          Like[]
+  following      Follow[] @relation("UserFollows")
+  followers      Follow[] @relation("UserFollowedBy")
+}
+
+model Post {
+  id        Int       @id @default(autoincrement())
+  userId    String
+  content   String?
+  image     String?
+  parentId  Int?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id])
+  comments  Comment[]
+  likes     Like[]
+  parent    Post?     @relation("PostReplies", fields: [parentId], references: [id])
+  replies   Post[]    @relation("PostReplies")
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  postId    Int
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id])
+}
+
+model Like {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  postId    Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id])
+}
+
+model Follow {
+  id          Int      @id @default(autoincrement())
+  followerId  String
+  followedId  String
+  createdAt   DateTime @default(now())
+  follower    User     @relation("UserFollows", fields: [followerId], references: [id])
+  followed    User     @relation("UserFollowedBy", fields: [followedId], references: [id])
+}
+
+model Shrine {
+  id          Int                 @id @default(autoincrement())
+  name        String              @unique
+  prefecture  Prefecture
+  area        String
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  shrineTags  ShrineBenefitTag[]
+}
+
+//ShrineBenefitモデルのshrinesフィールドについて、多対多の関係を明示的に定義する必要がある
+//ShrineBenefitとShrineの間に中間テーブルを作成。
+model ShrineBenefit {
+  id          Int                 @id @default(autoincrement())
+  name        String              @unique
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  shrineTags  ShrineBenefitTag[]
+}
+
+//中間テーブル
+model ShrineBenefitTag {
+  shrineId       Int
+  shrineBenefitId Int
+  shrine         Shrine        @relation(fields: [shrineId], references: [id])
+  shrineBenefit  ShrineBenefit @relation(fields: [shrineBenefitId], references: [id])
+  @@id([shrineId, shrineBenefitId])
+}
+
+enum Prefecture {
+  Hokkaido
+  Aomori
+  Iwate
+  //... その他の都道府県
+  Okinawa
+}
