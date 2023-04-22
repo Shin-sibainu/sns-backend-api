@@ -8,24 +8,7 @@ const upload = multer({ storage: storage });
 
 const POSTS_PER_PAGE = 10;
 
-router.get("/posts", async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const skip = (page - 1) * POSTS_PER_PAGE;
-
-  try {
-    const posts = await prisma.post.findMany({
-      take: POSTS_PER_PAGE,
-      skip,
-      orderBy: { createdAt: "desc" },
-    });
-
-    res.json(posts);
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ error: "Failed to fetch posts." });
-  }
-});
-
+//テキスト投稿API
 router.post("/text", async (req, res) => {
   const { userId, content } = req.body;
 
@@ -50,6 +33,7 @@ router.post("/text", async (req, res) => {
   }
 });
 
+//画像投稿API
 router.post("/image_upload", upload.single("image"), async (req, res) => {
   const { userId, content } = req.body;
   const imageFile = req.file;
@@ -88,6 +72,7 @@ router.post("/image_upload", upload.single("image"), async (req, res) => {
   }
 });
 
+//最新投稿の10件取得API（いいね数取得も）
 router.get("/get_posts", async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const skip = (page - 1) * POSTS_PER_PAGE;
@@ -96,12 +81,18 @@ router.get("/get_posts", async (req, res) => {
     const posts = await prisma.post.findMany({
       take: POSTS_PER_PAGE,
       skip,
-      orderBy: {
-        createdAt: "desc",
+      orderBy: { createdAt: "desc" },
+      include: {
+        likes: true,
       },
     });
 
-    res.status(200).json(posts);
+    const postsWithLikesCount = posts.map((post) => ({
+      ...post,
+      likesCount: post.likes.length,
+    }));
+
+    res.json(postsWithLikesCount);
   } catch (err) {
     res.status(500).json({ error: "Failed to get posts." });
   }

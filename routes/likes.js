@@ -2,9 +2,10 @@ const router = require("express").Router();
 const supabase = require("../supabaseClient");
 const prisma = require("../database");
 
+//投稿いいね＆いいね削除API
 router.post("/:postId", async (req, res) => {
-  const postId = parseInt(req.params.postId);
-  const userId = req.body.userId;
+  const postId = parseInt(req.params.postId); //:postIdの値
+  const userId = req.body.userId; //req.bodyに含める値
 
   if (!userId) {
     return res.status(400).json({ error: "User ID is required." });
@@ -17,38 +18,38 @@ router.post("/:postId", async (req, res) => {
   }
 
   try {
-    const like = await prisma.like.create({
-      data: {
-        userId,
-        postId,
-      },
-    });
-    res.status(201).json(like);
-  } catch (err) {
-    console.error(err); // Add this line
-    res.status(500).json({ error: "Failed to like the post." });
-  }
-});
-
-router.delete("/:postId", async (req, res) => {
-  const postId = parseInt(req.params.postId);
-  const userId = req.body.userId;
-
-  if (!userId) {
-    return res.status(400).json({ error: "User ID is required." });
-  }
-
-  try {
-    const like = await prisma.like.deleteMany({
+    //すでにいいねが存在するか確認。
+    const existingLike = await prisma.like.findFirst({
       where: {
         userId,
         postId,
       },
     });
 
-    res.status(200).json(like);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to remove the like from the post." });
+    console.log(existingLike);
+
+    if (existingLike) {
+      //いいねがあれば削除する。
+      await prisma.like.delete({
+        where: {
+          id: existingLike.id,
+        },
+      });
+
+      res.status(200).json({ message: "Like removed" });
+    } else {
+      //いいねがなければ、いいねする。
+      const like = await prisma.like.create({
+        data: {
+          userId,
+          postId,
+        },
+      });
+      res.status(201).json(like);
+    }
+  } catch (err) {
+    console.error(err); // Add this line
+    res.status(500).json({ error: "Failed to like the post." });
   }
 });
 

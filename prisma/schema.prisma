@@ -68,6 +68,7 @@ model Follow {
   createdAt   DateTime @default(now())
   follower    User     @relation("UserFollows", fields: [followerId], references: [id])
   followed    User     @relation("UserFollowedBy", fields: [followedId], references: [id])
+  @@unique([followerId, followedId])
 }
 
 model Shrine {
