@@ -1,6 +1,13 @@
 const router = require("express").Router();
 const supabase = require("../supabaseClient");
 const prisma = require("../database");
+const fs = require("fs");
+const util = require("util");
+const multer = require("multer");
+const storage = multer.memoryStorage();
+
+const upload = multer({ storage: storage });
+const unlinkAsync = util.promisify(fs.unlink);
 
 //ユーザープロフィール取得API
 router.get("/:userId", async (req, res) => {
@@ -37,9 +44,10 @@ router.get("/:userId", async (req, res) => {
 });
 
 //ユーザープロフィール編集API
-router.put("/:userId", async (req, res) => {
+router.put("/:userId", upload.single("profilePicture"), async (req, res) => {
   const userId = req.params.userId;
-  const { bio, profilePicture } = req.body;
+  const { bio } = req.body;
+  const profilePicture = req.file;
 
   try {
     const existingUser = await prisma.user.findUnique({
@@ -50,14 +58,37 @@ router.put("/:userId", async (req, res) => {
       return res.status(404).json({ error: "User not found." });
     }
 
+    let uploadedProfilePicture = existingUser.profilePicture;
+
+    if (profilePicture) {
+      // Upload the file to Supabase Storage
+      const filePath = `profile-picture/${userId}_${Date.now()}.jpg`;
+      console.log(profilePicture);
+
+      const { data, error } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, profilePicture.buffer, {
+          contentType: "image/jpeg",
+        });
+
+      if (error) {
+        console.error("Error uploading image to Supabase Storage:", error);
+        return res
+          .status(500)
+          .json({ error: "Failed to upload profile picture." });
+      }
+
+      // Get the public URL of the uploaded image from Supabase Storage
+      const imageUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/avatars/${filePath}`;
+
+      uploadedProfilePicture = imageUrl;
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
         bio: bio !== undefined ? bio : existingUser.bio,
-        profilePicture:
-          profilePicture !== undefined
-            ? profilePicture
-            : existingUser.profilePicture,
+        profilePicture: uploadedProfilePicture,
       },
     });
 

@@ -67,4 +67,44 @@ router.post("/logout", async (req, res) => {
   }
 });
 
+//ログインしているユーザー取得用API
+router.get("/:me", async (req, res) => {
+  const authHeader = req.header.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  try {
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: data.id },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        profilePicture: true,
+        bio: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.status(200).json(user);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch the user" });
+  }
+});
+
 module.exports = router;
