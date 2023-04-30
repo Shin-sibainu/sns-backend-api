@@ -3,6 +3,9 @@ const router = express.Router();
 const supabase = require("../supabaseClient");
 const prisma = require("../database");
 
+//これらの認証用APIは全てフロントエンドで定義する。
+//そうでないとセッション維持ができず、再度リロードするとuser情報が消えてしまうから。
+
 router.post("/register", async (req, res) => {
   const { email, password, username } = req.body;
 
@@ -36,24 +39,24 @@ router.post("/register", async (req, res) => {
   }
 });
 
-router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+// router.post("/login", async (req, res) => {
+//   const { email, password } = req.body;
 
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+//   try {
+//     const { data, error } = await supabase.auth.signInWithPassword({
+//       email,
+//       password,
+//     });
 
-    if (error) {
-      throw error;
-    }
+//     if (error) {
+//       throw error;
+//     }
 
-    res.status(200).json(data.user);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
+//     res.status(200).json({ user: data.user, token: data.session.access_token });
+//   } catch (error) {
+//     res.status(400).json({ error: error.message });
+//   }
+// });
 
 router.post("/logout", async (req, res) => {
   try {
@@ -67,24 +70,26 @@ router.post("/logout", async (req, res) => {
   }
 });
 
-//ログインしているユーザー取得用API
-router.get("/:me", async (req, res) => {
-  const authHeader = req.header.authorization;
+router.get("/me", async (req, res) => {
+  const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
   const token = authHeader.split(" ")[1];
+  // console.log(token);
 
   try {
     const { data, error } = await supabase.auth.getUser(token);
+    // console.log("aaa");
+    // console.log(data.user.email);
     if (error) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: data.id },
+      where: { email: data.user.email },
       select: {
         id: true,
         username: true,
