@@ -26,7 +26,7 @@ router.post("/:postId", async (req, res) => {
       },
     });
 
-    console.log(existingLike);
+    // console.log(existingLike);
 
     if (existingLike) {
       //いいねがあれば削除する。
