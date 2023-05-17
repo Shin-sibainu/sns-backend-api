@@ -133,6 +133,7 @@ router.get("/get_posts_for_timeline", async (req, res) => {
       take: POSTS_PER_PAGE,
       orderBy: { createdAt: "desc" },
       include: {
+        user: true,
         likes: true,
       },
     });
@@ -154,6 +155,7 @@ router.get("/get_more_posts", async (req, res) => {
 
   try {
     const posts = await prisma.post.findMany({
+      where: { parentId: null },
       take: POSTS_PER_PAGE,
       skip,
       orderBy: { createdAt: "desc" },

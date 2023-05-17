@@ -20,6 +20,8 @@ router.post("/register", async (req, res) => {
     }
 
     if (data && data.user) {
+      const avatarUrl = `https://avatars.dicebear.com/api/bottts/${username}.svg`;
+
       // Supabase Authで登録されたユーザー情報をPrismaのUserモデルにも追加
       const prismaUser = await prisma.user.create({
         data: {
@@ -27,6 +29,8 @@ router.post("/register", async (req, res) => {
           email,
           // 必要な他のフィールドをここに追加
           username,
+          profilePicture: avatarUrl,
+          bio: "こんにちは！はじめまして！",
         },
       });
 
