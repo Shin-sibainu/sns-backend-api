@@ -160,6 +160,7 @@ router.get("/get_more_posts", async (req, res) => {
       skip,
       orderBy: { createdAt: "desc" },
       include: {
+        user: true,
         likes: true,
       },
     });

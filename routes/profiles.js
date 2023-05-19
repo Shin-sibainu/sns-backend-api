@@ -44,6 +44,37 @@ router.get("/:userId", async (req, res) => {
   }
 });
 
+//閲覧中のユーザーが投稿している投稿を取得するAPI
+router.get("/posts/:userId", async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const userPosts = await prisma.post.findMany({
+      where: {
+        userId: userId,
+        parentId: null,
+      },
+      include: {
+        user: true,
+        likes: true,
+        comments: true, // 必要に応じてコメントも含める
+      },
+      orderBy: {
+        createdAt: "desc", // 最新の投稿が先に来るように
+      },
+    });
+
+    if (!userPosts.length) {
+      return res.status(404).json({ error: "No posts found for this user" });
+    }
+
+    res.json(userPosts);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error retrieving posts for this user" });
+  }
+});
+
 //ユーザープロフィール編集API
 router.put("/:userId", upload.single("profilePicture"), async (req, res) => {
   const userId = req.params.userId;
