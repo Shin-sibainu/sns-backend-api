@@ -78,7 +78,7 @@ router.get("/posts/:userId", async (req, res) => {
 //ユーザープロフィール編集API
 router.put("/:userId", upload.single("profilePicture"), async (req, res) => {
   const userId = req.params.userId;
-  const { bio } = req.body;
+  const { username, bio } = req.body;
   const profilePicture = req.file;
 
   try {
@@ -119,6 +119,7 @@ router.put("/:userId", upload.single("profilePicture"), async (req, res) => {
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
+        username: username !== undefined ? username : existingUser.username,
         bio: bio !== undefined ? bio : existingUser.bio,
         profilePicture: uploadedProfilePicture,
       },

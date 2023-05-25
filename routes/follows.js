@@ -63,4 +63,53 @@ router.post("/:followedId", async (req, res) => {
   }
 });
 
+// フォロー確認API
+router.get("/:followedId/:followerId", async (req, res) => {
+  const followedId = req.params.followedId; // フォローされているユーザーのID（相手）
+  const followerId = req.params.followerId; // フォローしているユーザーのID（自分）
+
+  if (!followerId || !followedId) {
+    return res
+      .status(400)
+      .json({ error: "Follower ID and Followed ID are required." });
+  }
+
+  if (followedId === followerId) {
+    return res
+      .status(400)
+      .json({ error: "自分自身をフォローすることはできません" });
+  }
+
+  const followedUser = await prisma.user.findUnique({
+    where: { id: followedId },
+  });
+  const followerUser = await prisma.user.findUnique({
+    where: { id: followerId },
+  });
+
+  if (!followedUser || !followerUser) {
+    return res.status(404).json({ error: "User not found." });
+  }
+
+  try {
+    const existingFollow = await prisma.follow.findFirst({
+      where: {
+        followerId,
+        followedId,
+      },
+    });
+
+    if (existingFollow) {
+      return res.status(200).json({ isFollowing: true });
+    } else {
+      return res.status(200).json({ isFollowing: false });
+    }
+  } catch (err) {
+    console.error(err);
+    res
+      .status(500)
+      .json({ error: "Failed to determine if the user is followed." });
+  }
+});
+
 module.exports = router;
