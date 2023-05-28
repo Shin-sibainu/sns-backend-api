@@ -132,4 +132,115 @@ router.put("/:userId", upload.single("profilePicture"), async (req, res) => {
   }
 });
 
+//フォロー中のユーザー一覧表示API
+router.get("/following/:userId", async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const following = await prisma.follow.findMany({
+      where: {
+        followerId: userId,
+      },
+      include: {
+        followed: {
+          select: {
+            id: true,
+            username: true,
+            profilePicture: true,
+          },
+        },
+      },
+    });
+
+    // Convert the array of Follow objects into array of User objects
+    const followingUsers = following.map((follow) => follow.followed);
+
+    // Return an empty array instead of a 404 error when no following users are found
+    res.json(followingUsers);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ error: "Error retrieving following list for this user" });
+  }
+});
+
+// フォロワーを取得するAPI
+router.get("/followers/:userId", async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const followers = await prisma.follow.findMany({
+      where: {
+        followedId: userId,
+      },
+      include: {
+        follower: {
+          select: {
+            id: true,
+            username: true,
+            profilePicture: true,
+          },
+        },
+      },
+    });
+
+    console.log(followers);
+
+    const followerUsers = followers.map((follow) => follow.follower);
+
+    res.json(followerUsers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error retrieving followers for this user" });
+  }
+});
+
+//フォロー中のユーザーの投稿を出力するAPI
+router.get("/followingPosts/:userId", async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    // まずフォローしているユーザーのリストを取得
+    const userFollowings = await prisma.follow.findMany({
+      where: {
+        followerId: userId,
+      },
+    });
+
+    // フォローしているユーザーのIDのリストを作成
+    const followingIds = userFollowings.map((follow) => follow.followedId);
+
+    // フォローしているユーザーの投稿を取得
+    const followingPosts = await prisma.post.findMany({
+      where: {
+        userId: {
+          in: followingIds,
+        },
+      },
+      include: {
+        user: true,
+        likes: true,
+        comments: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    if (!followingPosts.length) {
+      return res
+        .status(404)
+        .json({ error: "No posts found from followed users" });
+    }
+
+    res.json(followingPosts);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ error: "Error retrieving posts from followed users" });
+  }
+});
+
 module.exports = router;

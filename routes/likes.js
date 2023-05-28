@@ -1,5 +1,4 @@
 const router = require("express").Router();
-const supabase = require("../supabaseClient");
 const prisma = require("../database");
 
 //投稿いいね＆いいね削除API
