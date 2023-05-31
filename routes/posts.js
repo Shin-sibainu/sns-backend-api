@@ -8,73 +8,6 @@ const upload = multer({ storage }).single("image");
 
 const POSTS_PER_PAGE = 5;
 
-// //テキスト投稿API
-// router.post("/text", async (req, res) => {
-//   const { userId, content, title, shrineName, visitedDate } = req.body;
-
-//   try {
-//     const user = await prisma.user.findUnique({ where: { id: userId } });
-
-//     if (!user) {
-//       return res.status(404).json({ error: "ユーザーが見つかりません" });
-//     }
-
-//     const post = await prisma.post.create({
-//       data: {
-//         userId,
-//         title,
-//         content,
-//         shrineName,
-//         visitedDate,
-//       },
-//     });
-
-//     res.status(201).json(post);
-//   } catch (err) {
-//     res.status(500).json(err);
-//     res.status(500).json({ error: "テキスト投稿できませんでした。" });
-//   }
-// });
-
-// //画像投稿API
-// router.post("/image_upload", upload.single("image"), async (req, res) => {
-//   const { userId, content } = req.body;
-//   const imageFile = req.file;
-//   // console.log(imageFile);
-
-//   if (!imageFile) {
-//     return res.status(400).json({ error: "Image file is required." });
-//   }
-
-//   try {
-//     // 画像をSupabase Storageにアップロード
-//     const { data, error } = await supabase.storage
-//       .from("post-images")
-//       .upload(imageFile.originalname, imageFile.buffer);
-
-//     if (error) {
-//       console.log(error.message);
-//       return res.status(500).json({ error: "Failed to upload the image." });
-//     }
-
-//     // console.log(data);
-
-//     //テキストと画像のURLを投稿として保存
-//     const imageUrl = data.path; //画像のURLを取得
-//     const post = await prisma.post.create({
-//       data: {
-//         userId,
-//         content: `${content}\n\n![Image](${imageUrl})`,
-//         image: imageUrl,
-//       },
-//     });
-
-//     res.status(201).json(post);
-//   } catch (error) {
-//     res.status(500).json({ error: "Failed to create an image post." });
-//   }
-// });
-
 //テキスト投稿と画像投稿をまとめたAPI
 router.post("/post", upload, async (req, res) => {
   const { userId, title, shrineName, content, visitedDate } = req.body;
@@ -125,6 +58,7 @@ router.post("/post", upload, async (req, res) => {
     res.status(500).json({ error: "Failed to create a post." });
   }
 });
+
 //最新投稿の10件取得API（いいね数取得も）
 router.get("/get_posts_for_timeline", async (req, res) => {
   try {
@@ -148,6 +82,7 @@ router.get("/get_posts_for_timeline", async (req, res) => {
     res.status(500).json({ error: "Failed to get posts." });
   }
 });
+
 //もっと見る用のAPI
 router.get("/get_more_posts", async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -175,6 +110,7 @@ router.get("/get_more_posts", async (req, res) => {
     res.status(500).json({ error: "Failed to get posts." });
   }
 });
+
 //投稿の詳細ページ取得
 router.get("/:postId", async (req, res) => {
   const postId = parseInt(req.params.postId);
@@ -184,6 +120,7 @@ router.get("/:postId", async (req, res) => {
       where: { id: postId },
       include: {
         likes: true,
+        user: true,
       },
     });
 
@@ -254,6 +191,93 @@ router.get("/:postId/replies", async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Failed to get replies." });
   }
+});
+
+//投稿削除API
+router.delete("/:postId", async (req, res) => {
+  const postId = Number(req.params.postId);
+  const { userId } = req.body; // ここでは、req.user.idがログイン中のユーザーのIDであると仮定します。
+
+  // 先ずは投稿を取得します
+  const post = await prisma.post.findUnique({
+    where: {
+      id: postId,
+    },
+  });
+
+  // ユーザーが投稿の所有者でない場合はエラーメッセージを返します
+  if (post.userId !== userId) {
+    return res
+      .status(403)
+      .json({ message: "You can only delete your own posts." });
+  }
+
+  // ユーザーが投稿の所有者である場合は、まず関連するいいねを削除します
+  await prisma.like.deleteMany({
+    where: {
+      postId: postId,
+    },
+  });
+
+  // ユーザーが投稿の所有者である場合は投稿を削除します
+  const deletedPost = await prisma.post.delete({
+    where: {
+      id: postId,
+    },
+  });
+
+  res.json(deletedPost);
+});
+
+//投稿編集API
+router.put("/:postId", upload, async (req, res) => {
+  const postId = Number(req.params.postId);
+  const { userId, title, content, shrineName, visitedDate } = req.body; // これらはリクエストボディから送られてくる更新したいデータです
+  const imageFile = req.file;
+
+  // 先ずは投稿を取得します
+  const post = await prisma.post.findUnique({
+    where: {
+      id: postId,
+    },
+  });
+
+  // ユーザーが投稿の所有者でない場合はエラーメッセージを返します
+  if (post.userId !== userId) {
+    return res
+      .status(403)
+      .json({ message: "You can only edit your own posts." });
+  }
+
+  let imageUrl = post.image;
+  if (imageFile) {
+    // 画像をSupabase Storageにアップロード
+    const { data, error } = await supabase.storage
+      .from("post-images")
+      .upload(imageFile.originalname, imageFile.buffer, { upsert: true });
+
+    if (error) {
+      console.log(error.message);
+      return res.status(500).json({ error: "Failed to upload the image." });
+    }
+    imageUrl = data.path; //画像のURLを取得
+  }
+
+  // ユーザーが投稿の所有者である場合は投稿を更新します
+  const updatedPost = await prisma.post.update({
+    where: {
+      id: postId,
+    },
+    data: {
+      title,
+      content,
+      shrineName,
+      visitedDate: new Date(visitedDate), // 文字列型の日付をDateオブジェクトに変換
+      image: imageUrl, // 新しい画像のURLを追加
+    },
+  });
+
+  res.json(updatedPost);
 });
 
 module.exports = router;

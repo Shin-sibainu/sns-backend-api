@@ -33,6 +33,10 @@ router.get("/", async (req, res) => {
         },
       ],
     },
+    include: {
+      user: true,
+      likes: true,
+    },
   });
 
   res.json(searchResults);
