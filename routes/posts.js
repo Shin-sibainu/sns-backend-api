@@ -10,7 +10,7 @@ const POSTS_PER_PAGE = 5;
 
 //テキスト投稿と画像投稿をまとめたAPI
 router.post("/post", upload, async (req, res) => {
-  const { userId, title, shrineName, content, visitedDate } = req.body;
+  const { userId, title, shrineId, content, visitedDate } = req.body;
   const imageFile = req.file;
 
   try {
@@ -18,6 +18,12 @@ router.post("/post", upload, async (req, res) => {
     if (!user) {
       console.log("ログインしていません。");
       return res.status(404).json({ error: "ユーザーが見つかりません" });
+    }
+
+    const shrine = await prisma.shrine.findUnique({ where: { id: shrineId } });
+    if (!shrine) {
+      console.log("指定された神社が存在しません。");
+      return res.status(404).json({ error: "神社が見つかりません" });
     }
 
     let imageUrl;

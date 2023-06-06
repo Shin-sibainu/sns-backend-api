@@ -27,21 +27,22 @@ model User {
 }
 
 model Post {
-  id         Int       @id @default(autoincrement())
-  userId     String
-  title      String
-  shrineName String
-  content    String?
-  image      String?
-  parentId   Int?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  visitedDate DateTime
-  user       User      @relation(fields: [userId], references: [id])
-  comments   Comment[]
-  likes      Like[]
-  parent     Post?     @relation("PostReplies", fields: [parentId], references: [id])
-  replies    Post[]    @relation("PostReplies")
+  id           Int       @id @default(autoincrement())
+  userId       String
+  title        String
+  shrineId     Int
+  content      String?
+  image        String?
+  parentId     Int?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  visitedDate  DateTime
+  user         User      @relation(fields: [userId], references: [id])
+  shrine       Shrine    @relation(fields: [shrineId], references: [id])
+  comments     Comment[]
+  likes        Like[]
+  parent       Post?     @relation("PostReplies", fields: [parentId], references: [id])
+  replies      Post[]    @relation("PostReplies")
 }
 
 model Comment {
@@ -82,6 +83,7 @@ model Shrine {
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
   shrineTags  ShrineBenefitTag[]
+  posts       Post[]
 }
 
 //ShrineBenefitモデルのshrinesフィールドについて、多対多の関係を明示的に定義する必要がある
