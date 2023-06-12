@@ -78,8 +78,9 @@ model Follow {
 model Shrine {
   id          Int                 @id @default(autoincrement())
   name        String              @unique
-  prefecture  Prefecture
+  prefecture  String
   area        String
+  microCmsId  String              @unique
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
   shrineTags  ShrineBenefitTag[]
@@ -105,10 +106,3 @@ model ShrineBenefitTag {
   @@id([shrineId, shrineBenefitId])
 }
 
-enum Prefecture {
-  Hokkaido
-  Aomori
-  Iwate
-  //... その他の都道府県
-  Okinawa
-}

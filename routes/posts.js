@@ -20,9 +20,13 @@ router.post("/post", upload, async (req, res) => {
       return res.status(404).json({ error: "ユーザーが見つかりません" });
     }
 
-    const shrine = await prisma.shrine.findUnique({ where: { id: shrineId } });
+    //ここではSupabaseのshrineテーブルから神社を取得している。
+    const shrine = await prisma.shrine.findUnique({
+      where: { microCmsId: shrineId },
+    });
+
     if (!shrine) {
-      console.log("指定された神社が存在しません。");
+      // error handling
       return res.status(404).json({ error: "神社が見つかりません" });
     }
 
@@ -45,7 +49,7 @@ router.post("/post", upload, async (req, res) => {
     const postData = {
       userId,
       title,
-      shrineName,
+      shrineId: shrine.id, // ここを変更
       content: content,
       visitedDate: visitedDateTime,
     };
@@ -75,12 +79,14 @@ router.get("/get_posts_for_timeline", async (req, res) => {
       include: {
         user: true,
         likes: true,
+        shrine: true,
       },
     });
 
     const postsWithLikesCount = posts.map((post) => ({
       ...post,
       likesCount: post.likes.length,
+      shrineName: post.shrine.name, // ここでshrineのnameを取得できます
     }));
 
     res.json(postsWithLikesCount);
@@ -103,12 +109,14 @@ router.get("/get_more_posts", async (req, res) => {
       include: {
         user: true,
         likes: true,
+        shrine: true,
       },
     });
 
     const postsWithLikesCount = posts.map((post) => ({
       ...post,
       likesCount: post.likes.length,
+      shrineName: post.shrine.name, // ここでshrineのnameを取得できます
     }));
 
     res.json(postsWithLikesCount);
@@ -127,6 +135,7 @@ router.get("/:postId", async (req, res) => {
       include: {
         likes: true,
         user: true,
+        shrine: true,
       },
     });
 
@@ -137,6 +146,7 @@ router.get("/:postId", async (req, res) => {
     const postWithLikesCount = {
       ...post,
       likesCount: post.likes.length,
+      shrineName: post.shrine.name, // ここでshrineのnameを取得できます
     };
 
     res.json(postWithLikesCount);
@@ -150,7 +160,7 @@ router.post("/:postId/reply", async (req, res) => {
   const { content, userId } = req.body;
   const { postId } = req.params;
 
-  console.log(content, userId, postId);
+  // console.log(content, userId, postId);
 
   try {
     const originalPost = await prisma.post.findUnique({
@@ -167,7 +177,7 @@ router.post("/:postId/reply", async (req, res) => {
         userId,
         parentId: Number(postId),
         title: originalPost.title,
-        shrineName: originalPost.shrineName,
+        shrineId: originalPost.shrineId, // 追加: 元の投稿のshrineIdを利用
         visitedDate: originalPost.visitedDate,
       },
     });
@@ -238,8 +248,10 @@ router.delete("/:postId", async (req, res) => {
 //投稿編集API
 router.put("/:postId", upload, async (req, res) => {
   const postId = Number(req.params.postId);
-  const { userId, title, content, shrineName, visitedDate } = req.body; // これらはリクエストボディから送られてくる更新したいデータです
+  const { userId, title, content, shrineId, visitedDate } = req.body; // これらはリクエストボディから送られてくる更新したいデータです
   const imageFile = req.file;
+
+  // console.log(userId, title, content, shrineId, visitedDate);
 
   // 先ずは投稿を取得します
   const post = await prisma.post.findUnique({
@@ -253,6 +265,15 @@ router.put("/:postId", upload, async (req, res) => {
     return res
       .status(403)
       .json({ message: "You can only edit your own posts." });
+  }
+
+  const shrine = await prisma.shrine.findUnique({
+    where: { microCmsId: shrineId },
+  });
+
+  if (!shrine) {
+    // error handling
+    return res.status(404).json({ error: "神社が見つかりません" });
   }
 
   let imageUrl = post.image;
@@ -277,9 +298,9 @@ router.put("/:postId", upload, async (req, res) => {
     data: {
       title,
       content,
-      shrineName,
-      visitedDate: new Date(visitedDate), // 文字列型の日付をDateオブジェクトに変換
-      image: imageUrl, // 新しい画像のURLを追加
+      shrineId: shrine.id, // ここを変更
+      visitedDate: new Date(visitedDate),
+      image: imageUrl,
     },
   });
 

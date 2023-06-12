@@ -211,6 +211,10 @@ router.get("/followingPosts/:userId", async (req, res) => {
     // フォローしているユーザーのIDのリストを作成
     const followingIds = userFollowings.map((follow) => follow.followedId);
 
+    // フォローしているユーザーがいなければ空の配列を返す
+    if (!followingIds.length) {
+      return res.json([]);
+    }
     // フォローしているユーザーの投稿を取得
     const followingPosts = await prisma.post.findMany({
       where: {
@@ -228,10 +232,9 @@ router.get("/followingPosts/:userId", async (req, res) => {
       },
     });
 
+    // フォローしているユーザーが投稿を持っていない場合は空の配列を返す
     if (!followingPosts.length) {
-      return res
-        .status(404)
-        .json({ error: "No posts found from followed users" });
+      return res.json([]);
     }
 
     res.json(followingPosts);

@@ -9,11 +9,27 @@ router.get("/", async (req, res) => {
     return res.status(400).json({ message: "Search term is required" });
   }
 
+  // Step 1: Fetch Shrine IDs that match the search term
+  const matchingShrines = await prisma.shrine.findMany({
+    where: {
+      name: {
+        contains: searchTerm,
+        mode: "insensitive", // case-insensitive
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  const shrineIds = matchingShrines.map((shrine) => shrine.id);
+
+  // Step 2: Fetch posts that match the search term or are associated with matching shrines
   const searchResults = await prisma.post.findMany({
     where: {
       AND: [
         {
-          parentId: null, // 返信でない投稿
+          parentId: null, // Not a reply
         },
         {
           OR: [
@@ -24,9 +40,8 @@ router.get("/", async (req, res) => {
               },
             },
             {
-              shrineName: {
-                contains: searchTerm,
-                mode: "insensitive", // case-insensitive
+              shrineId: {
+                in: shrineIds,
               },
             },
           ],
@@ -36,10 +51,16 @@ router.get("/", async (req, res) => {
     include: {
       user: true,
       likes: true,
+      shrine: true,
     },
   });
 
-  res.json(searchResults);
+  const searchResultsWithShrineName = searchResults.map((post) => ({
+    ...post,
+    shrineName: post.shrine ? post.shrine.name : null, // check if shrine exists
+  }));
+
+  res.json(searchResultsWithShrineName);
 });
 
 module.exports = router;
