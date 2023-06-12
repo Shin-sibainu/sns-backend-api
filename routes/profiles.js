@@ -226,6 +226,7 @@ router.get("/followingPosts/:userId", async (req, res) => {
         user: true,
         likes: true,
         comments: true,
+        shrine: true,
       },
       orderBy: {
         createdAt: "desc",
@@ -237,7 +238,13 @@ router.get("/followingPosts/:userId", async (req, res) => {
       return res.json([]);
     }
 
-    res.json(followingPosts);
+    // 以下のようにfollowingPostsをマッピングして各投稿に神社の名前を追加します。
+    const followingPostsMapped = followingPosts.map((post) => ({
+      ...post,
+      shrineName: post.shrine.name,
+    }));
+
+    res.json(followingPostsMapped);
   } catch (error) {
     console.error(error);
     res

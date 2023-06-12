@@ -7,6 +7,7 @@ const likeRoute = require("./routes/likes");
 const followRoute = require("./routes/follows");
 const profileRoute = require("./routes/profiles");
 const searchRoute = require("./routes/search");
+const shrineRoute = require("./routes/shrine");
 const cors = require("cors");
 
 const PORT = 5000;
@@ -22,6 +23,7 @@ app.use("/api/likes", likeRoute);
 app.use("/api/follows", followRoute);
 app.use("/api/profiles", profileRoute);
 app.use("/api/search", searchRoute);
+app.use("/api/shrine", shrineRoute);
 
 const port = process.env.PORT || PORT;
 
