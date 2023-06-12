@@ -272,8 +272,7 @@ router.put("/:postId", upload, async (req, res) => {
   });
 
   if (!shrine) {
-    // error handling
-    return res.status(404).json({ error: "神社が見つかりません" });
+    return res.status(404).json({ error: "指定の神社は存在しません" });
   }
 
   let imageUrl = post.image;
