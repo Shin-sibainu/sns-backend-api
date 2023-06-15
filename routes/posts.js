@@ -69,7 +69,7 @@ router.post("/post", upload, async (req, res) => {
   }
 });
 
-//最新投稿の10件取得API（いいね数取得も）
+//最新投稿の5件取得API（いいね数取得も）
 router.get("/get_posts_for_timeline", async (req, res) => {
   try {
     const posts = await prisma.post.findMany({
@@ -121,6 +121,59 @@ router.get("/get_more_posts", async (req, res) => {
 
     res.json(postsWithLikesCount);
   } catch (err) {
+    res.status(500).json({ error: "Failed to get posts." });
+  }
+});
+
+//フォロー中ユーザーのもっと見るAPI
+router.get("/get_more_following_posts/:loggedInUserId", async (req, res) => {
+  const { loggedInUserId } = req.params;
+  const page = parseInt(req.query.page) || 1;
+  const skip = (page - 1) * POSTS_PER_PAGE;
+
+  try {
+    // 先ず現在のユーザーがフォローしているユーザーのIDを取得
+    const currentUser = await prisma.user.findUnique({
+      where: { id: loggedInUserId },
+      select: {
+        following: {
+          select: {
+            followedId: true,
+          },
+        },
+      },
+    });
+
+    // フォローしているユーザーのIDのみを配列として取り出す
+    // const followingIds = currentUser.following.map((user) => String(user.id));
+    const followingIds = currentUser.following.map(
+      (follow) => follow.followedId
+    );
+
+    // フォローしているユーザーの投稿を取得
+    const posts = await prisma.post.findMany({
+      where: {
+        AND: [{ userId: { in: followingIds } }, { parentId: null }],
+      },
+      take: POSTS_PER_PAGE,
+      skip,
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: true,
+        likes: true,
+        shrine: true,
+      },
+    });
+
+    const postsWithLikesCount = posts.map((post) => ({
+      ...post,
+      likesCount: post.likes.length,
+      shrineName: post.shrine.name, // ここでshrineのnameを取得できます
+    }));
+
+    res.json(postsWithLikesCount);
+  } catch (err) {
+    console.error("Error fetching posts:", err);
     res.status(500).json({ error: "Failed to get posts." });
   }
 });
@@ -200,6 +253,7 @@ router.get("/:postId/replies", async (req, res) => {
       include: {
         user: true,
       },
+      orderBy: { createdAt: "asc" },
     });
 
     return res.json(replies);

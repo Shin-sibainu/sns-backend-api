@@ -19,6 +19,7 @@ router.get("/prefecture/:prefName", async (req, res) => {
       orderBy: { name: "asc" },
       include: {
         posts: {
+          where: { parentId: null },
           include: {
             user: true, // include User model
             likes: true, // include Likes model
@@ -66,6 +67,7 @@ router.get("/prefectures/postcount", async (req, res) => {
   try {
     // すべての投稿を取得
     const posts = await prisma.post.findMany({
+      where: { parentId: null },
       include: {
         shrine: {
           select: {

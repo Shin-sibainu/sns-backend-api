@@ -7,7 +7,8 @@ const multer = require("multer");
 const storage = multer.memoryStorage();
 
 const upload = multer({ storage: storage });
-const unlinkAsync = util.promisify(fs.unlink);
+
+const POSTS_PER_PAGE = 5;
 
 //ユーザープロフィール取得API
 //c89febd9-29c2-4ec3-b380-e9295fc707bd
@@ -58,6 +59,7 @@ router.get("/posts/:userId", async (req, res) => {
         user: true,
         likes: true,
         comments: true, // 必要に応じてコメントも含める
+        shrine: true,
       },
       orderBy: {
         createdAt: "desc", // 最新の投稿が先に来るように
@@ -68,7 +70,13 @@ router.get("/posts/:userId", async (req, res) => {
       return res.status(404).json({ error: "No posts found for this user" });
     }
 
-    res.json(userPosts);
+    // マッピングで神社名も付け加える
+    const userPostsMapped = userPosts.map((post) => ({
+      ...post,
+      shrineName: post.shrine.name,
+    }));
+
+    res.json(userPostsMapped);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error retrieving posts for this user" });
@@ -221,7 +229,9 @@ router.get("/followingPosts/:userId", async (req, res) => {
         userId: {
           in: followingIds,
         },
+        parentId: null,
       },
+      take: POSTS_PER_PAGE,
       include: {
         user: true,
         likes: true,
