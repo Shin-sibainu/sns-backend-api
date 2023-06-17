@@ -4,14 +4,16 @@ const prisma = require("../database");
 const multer = require("multer");
 const storage = multer.memoryStorage();
 
-const upload = multer({ storage }).single("image");
+const upload = multer().array("images", 10); // Accept up to 10 files
 
 const POSTS_PER_PAGE = 5;
 
 //テキスト投稿と画像投稿をまとめたAPI
 router.post("/post", upload, async (req, res) => {
   const { userId, title, shrineId, content, visitedDate } = req.body;
-  const imageFile = req.file;
+  const imageFiles = req.files;
+
+  console.log(req.files);
 
   try {
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -30,18 +32,36 @@ router.post("/post", upload, async (req, res) => {
       return res.status(404).json({ error: "神社が見つかりません" });
     }
 
-    let imageUrl;
-    if (imageFile) {
-      // 画像をSupabase Storageにアップロード
-      const { data, error } = await supabase.storage
-        .from("post-images")
-        .upload(imageFile.originalname, imageFile.buffer);
+    // let imageUrl;
+    // if (imageFile) {
+    //   // 画像をSupabase Storageにアップロード
+    //   const { data, error } = await supabase.storage
+    //     .from("post-images")
+    //     .upload(imageFile.originalname, imageFile.buffer);
 
-      if (error) {
-        console.log(error.message);
-        return res.status(500).json({ error: "Failed to upload the image." });
+    //   if (error) {
+    //     console.log(error.message);
+    //     return res.status(500).json({ error: "Failed to upload the image." });
+    //   }
+    //   imageUrl = data.path; //画像のURLを取得
+    // }
+
+    let imageUrls = [];
+    if (imageFiles) {
+      for (let imageFile of imageFiles) {
+        // 画像をSupabase Storageにアップロード
+        const { data, error } = await supabase.storage
+          .from("post-images")
+          .upload(imageFile.originalname, imageFile.buffer, {
+            contentType: imageFile.mimetype,
+          });
+
+        if (error) {
+          console.log(error.message);
+          return res.status(500).json({ error: "Failed to upload the image." });
+        }
+        imageUrls.push(data.path); //画像のURLを配列に追加
       }
-      imageUrl = data.path; //画像のURLを取得
     }
 
     const visitedDateTime = new Date(visitedDate);
@@ -54,13 +74,22 @@ router.post("/post", upload, async (req, res) => {
       visitedDate: visitedDateTime,
     };
 
-    if (imageUrl) {
-      postData.image = imageUrl;
-    }
-
+    // create post
     const post = await prisma.post.create({
       data: postData,
     });
+
+    // create images
+    if (imageUrls.length > 0) {
+      for (let imageUrl of imageUrls) {
+        await prisma.image.create({
+          data: {
+            postId: post.id,
+            url: imageUrl,
+          },
+        });
+      }
+    }
 
     res.status(201).json(post);
   } catch (err) {

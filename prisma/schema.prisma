@@ -26,6 +26,16 @@ model User {
   followers      Follow[] @relation("UserFollowedBy")
 }
 
+model Image {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  url       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  post      Post     @relation(fields: [postId], references: [id])
+}
+
+
 model Post {
   id           Int       @id @default(autoincrement())
   userId       String
@@ -43,6 +53,7 @@ model Post {
   likes        Like[]
   parent       Post?     @relation("PostReplies", fields: [parentId], references: [id])
   replies      Post[]    @relation("PostReplies")
+  images       Image[]   // Add this line
 }
 
 model Comment {
