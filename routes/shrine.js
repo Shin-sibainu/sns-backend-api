@@ -23,6 +23,7 @@ router.get("/prefecture/:prefName", async (req, res) => {
           include: {
             user: true, // include User model
             likes: true, // include Likes model
+            images: true,
           },
         },
       },

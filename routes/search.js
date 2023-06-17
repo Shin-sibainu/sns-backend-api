@@ -52,6 +52,7 @@ router.get("/", async (req, res) => {
       user: true,
       likes: true,
       shrine: true,
+      images: true,
     },
   });
 

@@ -13,8 +13,6 @@ router.post("/post", upload, async (req, res) => {
   const { userId, title, shrineId, content, visitedDate } = req.body;
   const imageFiles = req.files;
 
-  console.log(req.files);
-
   try {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
@@ -109,6 +107,7 @@ router.get("/get_posts_for_timeline", async (req, res) => {
         user: true,
         likes: true,
         shrine: true,
+        images: true,
       },
     });
 
@@ -218,6 +217,7 @@ router.get("/:postId", async (req, res) => {
         likes: true,
         user: true,
         shrine: true,
+        images: true,
       },
     });
 

@@ -60,6 +60,7 @@ router.get("/posts/:userId", async (req, res) => {
         likes: true,
         comments: true, // 必要に応じてコメントも含める
         shrine: true,
+        images: true,
       },
       orderBy: {
         createdAt: "desc", // 最新の投稿が先に来るように
@@ -237,6 +238,7 @@ router.get("/followingPosts/:userId", async (req, res) => {
         likes: true,
         comments: true,
         shrine: true,
+        images: true,
       },
       orderBy: {
         createdAt: "desc",
