@@ -47,18 +47,17 @@ router.post("/post", upload, async (req, res) => {
     let imageUrls = [];
     if (imageFiles) {
       for (let imageFile of imageFiles) {
-        // 画像をSupabase Storageにアップロード
+        const uniqueFilename = `${Date.now()}-${imageFile.originalname}`;
+        // Upload the new images to Supabase Storage
         const { data, error } = await supabase.storage
           .from("post-images")
-          .upload(imageFile.originalname, imageFile.buffer, {
-            contentType: imageFile.mimetype,
-          });
+          .upload(uniqueFilename, imageFile.buffer);
 
         if (error) {
           console.log(error.message);
           return res.status(500).json({ error: "Failed to upload the image." });
         }
-        imageUrls.push(data.path); //画像のURLを配列に追加
+        imageUrls.push(data.path);
       }
     }
 
@@ -332,7 +331,7 @@ router.delete("/:postId", async (req, res) => {
 router.put("/:postId", upload, async (req, res) => {
   const postId = Number(req.params.postId);
   const { userId, title, content, shrineId, visitedDate } = req.body; // これらはリクエストボディから送られてくる更新したいデータです
-  const imageFile = req.file;
+  const imageFiles = req.files;
 
   // console.log(userId, title, content, shrineId, visitedDate);
 
@@ -340,6 +339,9 @@ router.put("/:postId", upload, async (req, res) => {
   const post = await prisma.post.findUnique({
     where: {
       id: postId,
+    },
+    include: {
+      images: true, // Fetch the existing images
     },
   });
 
@@ -358,19 +360,29 @@ router.put("/:postId", upload, async (req, res) => {
     return res.status(404).json({ error: "指定の神社は存在しません" });
   }
 
-  let imageUrl = post.image;
-  if (imageFile) {
-    // 画像をSupabase Storageにアップロード
-    const { data, error } = await supabase.storage
-      .from("post-images")
-      .upload(imageFile.originalname, imageFile.buffer, { upsert: true });
+  let imageUrls = [];
+  if (imageFiles) {
+    for (let imageFile of imageFiles) {
+      const uniqueFilename = `${Date.now()}-${imageFile.originalname}`;
+      // Upload the new images to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from("post-images")
+        .upload(uniqueFilename, imageFile.buffer);
 
-    if (error) {
-      console.log(error.message);
-      return res.status(500).json({ error: "Failed to upload the image." });
+      if (error) {
+        console.log(error.message);
+        return res.status(500).json({ error: "Failed to upload the image." });
+      }
+      imageUrls.push(data.path);
     }
-    imageUrl = data.path; //画像のURLを取得
   }
+
+  // Delete the existing images from the database
+  await prisma.image.deleteMany({
+    where: {
+      postId: postId,
+    },
+  });
 
   // ユーザーが投稿の所有者である場合は投稿を更新します
   const updatedPost = await prisma.post.update({
@@ -380,13 +392,34 @@ router.put("/:postId", upload, async (req, res) => {
     data: {
       title,
       content,
-      shrineId: shrine.id, // ここを変更
+      shrineId: shrine.id,
       visitedDate: new Date(visitedDate),
-      image: imageUrl,
     },
   });
 
-  res.json(updatedPost);
+  // Add the new images to the database
+  if (imageUrls.length > 0) {
+    for (let imageUrl of imageUrls) {
+      await prisma.image.create({
+        data: {
+          postId: updatedPost.id,
+          url: imageUrl,
+        },
+      });
+    }
+  }
+
+  // データベースから新たに更新された投稿データを取得します。
+  const refreshedPost = await prisma.post.findUnique({
+    where: {
+      id: postId,
+    },
+    include: {
+      images: true,
+    },
+  });
+
+  res.json(refreshedPost);
 });
 
 module.exports = router;

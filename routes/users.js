@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const supabase = require("../supabaseClient");
 const prisma = require("../database");
+const { Prisma } = require("@prisma/client");
 
 //これらの認証用APIは全てフロントエンドで定義する。
 //そうでないとセッション維持ができず、再度リロードするとuser情報が消えてしまうから。
@@ -23,22 +24,42 @@ router.post("/register", async (req, res) => {
       const avatarUrl = `https://avatars.dicebear.com/api/bottts/${username}.svg`;
 
       // Supabase Authで登録されたユーザー情報をPrismaのUserモデルにも追加
-      const prismaUser = await prisma.user.create({
-        data: {
-          id: data.user.sub, // Supabase Authで生成されたユーザーIDを 'sub' プロパティから取得
-          email,
-          // 必要な他のフィールドをここに追加
-          username,
-          profilePicture: avatarUrl,
-          bio: "こんにちは！はじめまして！",
-        },
-      });
-
-      res.status(200).json({ user: prismaUser });
+      try {
+        const prismaUser = await prisma.user.create({
+          data: {
+            id: data.user.sub, // Supabase Authで生成されたユーザーIDを 'sub' プロパティから取得
+            email,
+            // 必要な他のフィールドをここに追加
+            username,
+            profilePicture: avatarUrl,
+            bio: "こんにちは！はじめまして！",
+          },
+        });
+        res.status(200).json({ user: prismaUser });
+      } catch (prismaError) {
+        if (
+          prismaError instanceof Prisma.PrismaClientKnownRequestError &&
+          prismaError.code === "P2002"
+        ) {
+          if (prismaError.meta.target.includes("email")) {
+            res
+              .status(400)
+              .json({ error: "このメールアドレスは既に登録されています。" });
+          } else if (prismaError.meta.target.includes("username")) {
+            res
+              .status(400)
+              .json({ error: "このユーザー名は既に使用されています。" });
+          }
+        } else {
+          // その他のPrismaエラー
+          res.status(400).json({ error: prismaError.message });
+        }
+      }
     } else {
       res.status(400).json({ error: "User is not defined." });
     }
   } catch (error) {
+    console.log(error.message);
     res.status(400).json({ error: error.message });
   }
 });
