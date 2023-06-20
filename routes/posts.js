@@ -16,7 +16,6 @@ router.post("/post", upload, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
-      console.log("ログインしていません。");
       return res.status(404).json({ error: "ユーザーが見つかりません" });
     }
 
@@ -137,6 +136,7 @@ router.get("/get_more_posts", async (req, res) => {
         user: true,
         likes: true,
         shrine: true,
+        images: true,
       },
     });
 
@@ -189,6 +189,7 @@ router.get("/get_more_following_posts/:loggedInUserId", async (req, res) => {
         user: true,
         likes: true,
         shrine: true,
+        images: true,
       },
     });
 
