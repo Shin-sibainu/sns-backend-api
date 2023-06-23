@@ -13,6 +13,8 @@ const cors = require("cors");
 const PORT = 5000;
 
 //https://hotokami.jp/
+//https://inory-sns-backend.onrender.com/
+//https://sns-frontend-client.vercel.app/
 
 app.use(cors());
 app.use(express.json());
