@@ -1,7 +1,7 @@
 const router = require("express").Router();
 const prisma = require("../database");
 
-router.post("/webhook/shrine", async (req, res) => {
+router.post("/shrine", async (req, res) => {
   // MicroCMSからのデータがreq.bodyに入っている
   const shrine = req.body;
 
