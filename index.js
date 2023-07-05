@@ -8,6 +8,7 @@ const followRoute = require("./routes/follows");
 const profileRoute = require("./routes/profiles");
 const searchRoute = require("./routes/search");
 const shrineRoute = require("./routes/shrine");
+const webhookRoute = require("./routes/webhooks");
 const cors = require("cors");
 
 const PORT = 5000;
@@ -26,6 +27,7 @@ app.use("/api/follows", followRoute);
 app.use("/api/profiles", profileRoute);
 app.use("/api/search", searchRoute);
 app.use("/api/shrine", shrineRoute);
+app.use("/api/webhooks", webhookRoute);
 
 const port = process.env.PORT || PORT;
 
